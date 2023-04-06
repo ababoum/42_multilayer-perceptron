@@ -12,6 +12,7 @@ def is_matrix_valid(x):
         return False
     return True
 
+
 def is_vector_valid(x):
     if not isinstance(x, np.ndarray):
         return False
@@ -22,6 +23,7 @@ def is_vector_valid(x):
     if x.size == 0:
         return False
     return True
+
 
 def data_splitter(x, y, proportion):
     """Shuffles and splits the dataset (given by x and y) into a training and a test set,

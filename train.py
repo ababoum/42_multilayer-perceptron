@@ -34,7 +34,13 @@ mymlp = mlp.MyMLP(hidden_layer_sizes,
                       4, 1), np.random.rand(2, 1)],
                   'sigmoid',
                   0.1,
-                  1000)
+                  500)
 
-predictions = mymlp.predict(x_train[0].reshape(-1, 1))
-print(predictions)
+# show score before training
+print('score before training: ', mymlp.score(x_test, y_test))
+
+# train network
+mymlp.fit(x_train, y_train)
+
+# show score after training
+print('score after training: ', mymlp.score(x_test, y_test))

@@ -150,3 +150,79 @@ class MyMLP:
 
         # return output
         return np.array(self.network.layers[-1].neurons).reshape(-1, 1)
+
+    def loss(self, y, y_pred):
+        '''
+        Computes the loss of the MLP for the given input and output.
+        y is a numpy array of size (number of outputs, 1).
+        y_pred is a numpy array of size (number of outputs, 1).
+        '''
+        return np.sum((y - y_pred) ** 2)
+
+    def score(self, x, y):
+        '''
+        Computes the score of the MLP for the given input and output.
+        x is a numpy array of size (number of features, number of samples).
+        y is a numpy array of size (number of outputs, number of samples).
+        '''
+        y_pred = []
+        for i in range(x.shape[0]):
+            diag = self.predict(x[i, :].reshape(-1, 1))
+            y_pred.append(0 if diag[0] > diag[1] else 1)
+        y_pred = np.array(y_pred).reshape(-1, 1)
+        return 1 - self.loss(y, y_pred)
+
+    def fit(self, x, y):
+        '''
+        Trains the MLP for the given input and output.
+        x is a numpy array of size (number of samples, number of features).
+        y is a numpy array of size (number of samples, number of outputs).
+        '''
+        for epoch in range(self.max_iter):
+            print(f'epoch {epoch}/{self.max_iter} - score: {self.score(x, y)}')
+            for i in range(x.shape[0]):
+                self.train(x[i, :].reshape(-1, 1), y[i, :].reshape(-1, 1))
+
+    def train(self, x, y):
+        '''
+        Trains the MLP for the given input and output.
+        x is a numpy array of size (number of features, 1).
+        y is a numpy array of size (number of outputs, 1).
+        '''
+        # forward propagation
+        for i in range(len(self.network.layers)):
+            layer = self.network.layers[i]
+            entry = None
+            if i == 0:
+                entry = x
+            else:
+                entry = self.network.layers[i - 1].neurons
+
+            layer.neurons = self.activation_function(
+                layer.weights @ entry + layer.biases)
+
+        # backward propagation
+        for i in range(len(self.network.layers) - 1, -1, -1):
+            layer = self.network.layers[i]
+            entry = None
+            if i == 0:
+                entry = x
+            else:
+                entry = self.network.layers[i - 1].neurons
+
+            if i == len(self.network.layers) - 1:
+                # output layer
+                layer.weights = layer.weights - self.learning_rate_init * (
+                    2 * (layer.neurons - y) * layer.neurons *
+                    (1 - layer.neurons) @ entry.T)
+                layer.biases = layer.biases - self.learning_rate_init * (
+                    2 * (layer.neurons - y) * layer.neurons *
+                    (1 - layer.neurons))
+            else:
+                # hidden layers
+                layer.weights = layer.weights - self.learning_rate_init * (
+                    2 * (layer.neurons - y) * layer.neurons *
+                    (1 - layer.neurons) @ entry.T)
+                layer.biases = layer.biases - self.learning_rate_init * (
+                    2 * (layer.neurons - y) * layer.neurons *
+                    (1 - layer.neurons))

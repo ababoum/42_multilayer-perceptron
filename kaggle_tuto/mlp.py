@@ -3,37 +3,32 @@ import numpy as np
 
 
 class MultiLayerPerceptron():
-    def __init__(self, params=None):
-        if (params == None):
-            self.input_layer = 30                      # Input Layer
-            self.hidden_layer = 15                     # Hidden Layer
-            self.output_layer = 2                      # Output Layer
-            self.learning_rate = 0.005                 # Learning rate
-            self.max_epochs = 600                      # Epochs
-            self.bias_hidden_value = -1                # Bias HiddenLayer
-            self.biasOutputValue = -1                  # Bias OutputLayer
-            self.activation = self.action_functions['sigmoid']
-            self.deriv = self.derivative_functions['sigmoid']
-        else:
-            self.inputLayer = params['InputLayer']
-            self.hiddenLayer = params['HiddenLayer']
-            self.OutputLayer = params['OutputLayer']
-            self.learningRate = params['LearningRate']
-            self.max_epochs = params['Epocs']
-            self.BiasHiddenValue = params['BiasHiddenValue']
-            self.BiasOutputValue = params['BiasOutputValue']
-            self.activation = self.action_functions[params['ActivationFunction']]
-            self.deriv = self.derivative_functions[params['ActivationFunction']]
+    def __init__(self, network, input_layer_size=30, hidden_layer_size=15, output_layer_size=2, learning_rate=0.005, max_epochs=600, bias_hidden_value=0.0, bias_output_value=0.0, activation='sigmoid'):
+        self.input_layer_size = input_layer_size
+        self.hidden_layer_size = hidden_layer_size
+        self.output_layer_size = output_layer_size
+        self.learning_rate = learning_rate
+        self.max_epochs = max_epochs
+        self.bias_hidden_value = float(bias_hidden_value)
+        self.bias_output_value = float(bias_output_value)
+        self.activation = self.action_functions[activation]
+        self.deriv = self.derivative_functions[activation]
 
-        'Starting Bias and Weights'
-        self.WEIGHT_hidden = self.starting_weights(
-            self.hiddenLayer, self.inputLayer)
-        self.WEIGHT_output = self.starting_weights(
-            self.OutputLayer, self.hiddenLayer)
-        self.BIAS_hidden = np.array(
-            [self.BiasHiddenValue for i in range(self.hiddenLayer)])
-        self.BIAS_output = np.array(
-            [self.BiasOutputValue for i in range(self.OutputLayer)])
+        # Connecting the network with the model
+        self.network = network
+        self.input_layer = self.network[0]
+        self.hidden_layer = self.network[1]
+        self.output_layer = self.network[2]
+
+        # Starting Bias and Weights
+        self.weight_matrix_hidden = self.starting_weights(
+            self.hidden_layer_size, self.input_layer_size)
+        self.weight_matrix_output = self.starting_weights(
+            self.output_layer_size, self.hidden_layer_size)
+        self.bias_matrix_hidden = np.array(
+            [self.bias_hidden_value for i in range(self.hidden_layer_size)]).reshape(-1, 1)
+        self.bias_matrix_output = np.array(
+            [self.bias_output_value for i in range(self.output_layer_size)]).reshape(-1, 1)
         self.classes_number = 2
 
     action_functions = {
@@ -48,34 +43,60 @@ class MultiLayerPerceptron():
     }
 
     def starting_weights(self, x, y):
-        return [[2 * random.random() - 1 for i in range(x)] for j in range(y)]
+        return np.array([[random.random() for i in range(y)] for j in range(x)])
 
-    def Backpropagation_Algorithm(self, x):
-        '''
-        Backpropagation Algorithm
-        x: input (array)
-        '''
+    def feed_forward(self, inputs) -> None:
+        '''Updates the values of the neurons inside the layers of the network'''
 
-        DELTA_output = []
-        'Stage 1 - Error: OutputLayer'
-        ERROR_output = self.output - self.OUTPUT_L2
-        DELTA_output = ((-1) * (ERROR_output) * self.deriv(self.OUTPUT_L2))
+        self.input_layer = inputs.reshape(-1, 1)
+        self.hidden_layer = self.activation(
+            np.matmul(self.weight_matrix_hidden, self.input_layer) + self.bias_matrix_hidden)
+        self.output_layer = self.activation(
+            np.matmul(self.weight_matrix_output, self.hidden_layer) + self.bias_matrix_output)
 
-        arrayStore = []
-        'Stage 2 - Update weights OutputLayer and HiddenLayer'
-        for i in range(self.hiddenLayer):
-            for j in range(self.OutputLayer):
-                self.WEIGHT_output[i][j] -= (self.learningRate *
-                                             (DELTA_output[j] * self.OUTPUT_L1[i]))
-                self.BIAS_output[j] -= (self.learningRate * DELTA_output[j])
+    def back_propagation(self, outputs) -> None:
+        '''Updates the values of the weights and biases of each layer of the network'''
 
-        'Stage 3 - Error: HiddenLayer'
-        delta_hidden = np.matmul(
-            self.WEIGHT_output, DELTA_output) * self.deriv(self.OUTPUT_L1)
+        # Calculate the error
+        error = outputs.reshape(-1, 1) - self.output_layer
 
-        'Stage 4 - Update weights HiddenLayer and InputLayer(x)'
-        for i in range(self.OutputLayer):
-            for j in range(self.hiddenLayer):
-                self.WEIGHT_hidden[i][j] -= (self.learningRate *
-                                             (delta_hidden[j] * x[i]))
-                self.BIAS_hidden[j] -= (self.learningRate * delta_hidden[j])
+        # Calculate the delta
+        delta_output = error * self.deriv(self.output_layer)
+
+        # Calculate the error of the hidden layer
+        error_hidden = np.matmul(self.weight_matrix_output.T, delta_output)
+
+        # Calculate the delta of the hidden layer
+        delta_hidden = error_hidden * self.deriv(self.hidden_layer)
+
+        # Update the weights
+        self.weight_matrix_output += self.learning_rate * \
+            np.matmul(delta_output, self.hidden_layer.T)
+        self.weight_matrix_hidden += self.learning_rate * \
+            np.matmul(delta_hidden, self.input_layer.T)
+
+        # Update the biases
+        self.bias_matrix_output += self.learning_rate * delta_output
+        self.bias_matrix_hidden += self.learning_rate * delta_hidden
+
+    def fit(self, inputs, outputs):
+        for epoch in range(self.max_epochs):
+            for i in range(len(inputs)):
+                self.feed_forward(inputs[i])
+                self.back_propagation(outputs[i])
+            print(f'Epoch: {epoch} - Score {self.score(inputs, outputs)}')
+
+    def predict(self, inputs):
+        self.feed_forward(inputs)
+        return self.output_layer
+
+    def predict_classes(self, inputs):
+        self.feed_forward(inputs)
+        return np.argmax(self.output_layer)
+
+    def score(self, inputs, outputs):
+        predictions = []
+        testing_sample_size = len(inputs)
+        for i in range(testing_sample_size):
+            predictions.append(self.predict_classes(inputs[i]))
+        return np.sum(predictions == outputs) / len(outputs)

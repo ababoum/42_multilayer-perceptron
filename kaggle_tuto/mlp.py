@@ -3,7 +3,7 @@ import numpy as np
 
 
 class MultiLayerPerceptron():
-    def __init__(self, network, input_layer_size=30, hidden_layer_size=15, output_layer_size=2, learning_rate=0.005, max_epochs=600, bias_hidden_value=0.0, bias_output_value=0.0, activation='sigmoid'):
+    def __init__(self, network, input_layer_size=30, hidden_layer_size=15, output_layer_size=2, learning_rate=0.005, max_epochs=600, bias_hidden_value=0.0, bias_output_value=0.0, activation='ReLU'):
         self.input_layer_size = input_layer_size
         self.hidden_layer_size = hidden_layer_size
         self.output_layer_size = output_layer_size
@@ -34,12 +34,12 @@ class MultiLayerPerceptron():
     action_functions = {
         'sigmoid': (lambda x: 1 / (1 + np.exp(-x))),
         'tanh': (lambda x: np.tanh(x)),
-        'Relu': (lambda x: x * (x > 0)),
+        'ReLU': (lambda x: x * (x > 0)),
     }
     derivative_functions = {
         'sigmoid': (lambda x: x * (1 - x)),
         'tanh': (lambda x: 1 - x ** 2),
-        'Relu': (lambda x: 1 * (x > 0))
+        'ReLU': (lambda x: 1 * (x > 0))
     }
 
     def starting_weights(self, x, y):
